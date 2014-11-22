@@ -50,7 +50,7 @@ func TestEventStream(t *testing.T) {
 
 	expectedOutput := "id: 1\ndata: dataone\n\nid: 2\nevent: omg\ndata: datatwo\n\n"
 
-	if expectedOutput != w.Recorder.Body.String() {
+	if expectedOutput != string(w.Bytes()) {
 		t.Errorf("expected:\n%s\nreceived:\n%s\n", expectedOutput, w.Recorder.Body)
 	}
 }
