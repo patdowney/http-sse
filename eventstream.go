@@ -1,11 +1,26 @@
 package sse
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 )
+
+func EventToBytes(event Event) []byte {
+	var b bytes.Buffer
+
+	if event.ID() != "" {
+		fmt.Fprintf(&b, "id: %s\n", event.ID())
+	}
+	if event.Event() != "" {
+		fmt.Fprintf(&b, "event: %s\n", event.Event())
+	}
+	fmt.Fprintf(&b, "data: %s\n\n", event.Data())
+
+	return b.Bytes()
+}
 
 type EventStream struct {
 	writer      EventWriter
@@ -21,13 +36,7 @@ func (es *EventStream) writeHeaders() {
 }
 
 func (es *EventStream) writeEvent(event Event) {
-	if event.ID() != "" {
-		fmt.Fprintf(es.writer, "id: %s\n", event.ID())
-	}
-	if event.Event() != "" {
-		fmt.Fprintf(es.writer, "event: %s\n", event.Event())
-	}
-	fmt.Fprintf(es.writer, "data: %s\n\n", event.Data())
+	es.writer.Write(EventToBytes(event))
 	es.writer.Flush()
 }
 
