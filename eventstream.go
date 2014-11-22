@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -53,7 +52,6 @@ func (es *EventStream) Start() {
 			case event := <-es.eventStream:
 				es.writeEvent(event)
 			case <-es.writer.CloseNotify():
-				log.Println("Closing connection")
 				es.Closed <- true
 				return
 			}
