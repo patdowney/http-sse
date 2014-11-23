@@ -27,6 +27,10 @@ type EventStream struct {
 	Closed      chan bool
 }
 
+func (es *EventStream) CloseNotify() <-chan bool {
+	return es.writer.CloseNotify()
+}
+
 func (es *EventStream) writeHeaders() {
 	es.writer.Header().Set("Content-Type", "text/event-stream")
 	es.writer.Header().Set("Cache-Control", "no-cache")
