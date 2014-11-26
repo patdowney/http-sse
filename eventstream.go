@@ -24,11 +24,11 @@ func EventToBytes(event Event) []byte {
 type EventStream struct {
 	writer      EventWriter
 	eventStream chan Event
-	Closed      chan bool
+	closed      chan bool
 }
 
 func (es *EventStream) CloseNotify() <-chan bool {
-	return es.writer.CloseNotify()
+	return es.closed
 }
 
 func (es *EventStream) writeHeaders() {
@@ -56,11 +56,15 @@ func (es *EventStream) Start() {
 			case event := <-es.eventStream:
 				es.writeEvent(event)
 			case <-es.writer.CloseNotify():
-				es.Closed <- true
+				es.closed <- true
 				return
 			}
 		}
 	}()
+}
+
+func (es *EventStream) Stop() {
+	es.closed <- true
 }
 
 func NewEventStream(w http.ResponseWriter) (*EventStream, error) {
@@ -71,6 +75,17 @@ func NewEventStream(w http.ResponseWriter) (*EventStream, error) {
 	es := EventStream{
 		writer:      ew,
 		eventStream: make(chan Event),
+		closed:      make(chan bool),
 	}
 	return &es, nil
+}
+
+func StartNewEventStream(w http.ResponseWriter) (*EventStream, error) {
+	s, err := NewEventStream(w)
+	if err != nil {
+		return nil, err
+	}
+	s.Start()
+
+	return s, nil
 }

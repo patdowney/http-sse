@@ -1,6 +1,7 @@
 package sse
 
 import (
+	"runtime"
 	"sync"
 )
 
@@ -22,6 +23,12 @@ func NewBroker() *EventBroker {
 		stopChannel:        make(chan bool),
 		subscriberMutex:    &sync.Mutex{},
 	}
+	return b
+}
+
+func StartNewBroker() *EventBroker {
+	b := NewBroker()
+	b.Start()
 	return b
 }
 
@@ -63,6 +70,15 @@ func (b *EventBroker) removeSubscriber(subscriber *EventStream) {
 	b.subscriberMutex.Unlock()
 }
 
+func (b *EventBroker) waitToCloseSubscribers() {
+	for {
+		if len(b.subscribers) >= 0 {
+			return
+		}
+		runtime.Gosched()
+	}
+}
+
 func (b *EventBroker) Start() {
 	go func() {
 		for {
@@ -74,12 +90,19 @@ func (b *EventBroker) Start() {
 			case event := <-b.eventStream:
 				b.publishEvent(event)
 			case <-b.stopChannel:
-				return
+				b.closeSubscribers()
 			}
 		}
 	}()
 }
 
+func (b *EventBroker) closeSubscribers() {
+	for stream, _ := range b.subscribers {
+		stream.Stop()
+	}
+}
+
 func (b *EventBroker) Stop() {
 	b.stopChannel <- true
+	b.waitToCloseSubscribers()
 }
