@@ -2,6 +2,7 @@ package sse
 
 import (
 	"bytes"
+	"context"
 
 	"github.com/patdowney/http-sse/ssetest"
 )
@@ -9,13 +10,17 @@ import (
 type TestStream struct {
 	eventStream    *EventStream
 	streamRecorder *ssetest.StreamRecorder
+	cancelFunc     context.CancelFunc
 }
 
 func NewTestStream(start bool) (*TestStream, error) {
-	t := TestStream{}
-	t.streamRecorder = ssetest.NewStreamRecorder()
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	t := TestStream{
+		streamRecorder: ssetest.NewStreamRecorder(),
+		cancelFunc:     cancelFunc,
+	}
 
-	eventStream, err := NewEventStream(t.streamRecorder)
+	eventStream, err := NewEventStream(t.streamRecorder, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +42,8 @@ func (t *TestStream) Received(event Event) bool {
 }
 
 func (t *TestStream) CloseRecorder() {
-	t.streamRecorder.Close()
+	t.cancelFunc()
+	//	t.streamRecorder.Close()
 }
 
 func (t *TestStream) EventStream() *EventStream {

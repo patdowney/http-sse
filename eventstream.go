@@ -2,7 +2,7 @@ package sse
 
 import (
 	"bytes"
-	"errors"
+	"context"
 	"fmt"
 	"net/http"
 )
@@ -23,12 +23,9 @@ func EventToBytes(event Event) []byte {
 
 type EventStream struct {
 	writer      EventWriter
+	context     context.Context
 	eventStream chan Event
 	closed      chan bool
-}
-
-func (es *EventStream) CloseNotify() <-chan bool {
-	return es.closed
 }
 
 func (es *EventStream) writeHeaders() {
@@ -39,8 +36,10 @@ func (es *EventStream) writeHeaders() {
 }
 
 func (es *EventStream) writeEvent(event Event) {
-	es.writer.Write(EventToBytes(event))
-	es.writer.Flush()
+	defer func() {
+		es.writer.Flush()
+	}()
+	_, _ = es.writer.Write(EventToBytes(event))
 }
 
 func (es *EventStream) SendEvent(event Event) {
@@ -55,7 +54,7 @@ func (es *EventStream) Start() {
 			select {
 			case event := <-es.eventStream:
 				es.writeEvent(event)
-			case <-es.writer.CloseNotify():
+			case <-es.context.Done():
 				es.closed <- true
 				return
 			}
@@ -67,21 +66,22 @@ func (es *EventStream) Stop() {
 	es.closed <- true
 }
 
-func NewEventStream(w http.ResponseWriter) (*EventStream, error) {
+func NewEventStream(w http.ResponseWriter, c context.Context) (*EventStream, error) {
 	ew, ok := w.(EventWriter)
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("%T doesn't supported streaming", w))
+		return nil, fmt.Errorf("%T doesn't supported streaming", w)
 	}
 	es := EventStream{
 		writer:      ew,
+		context:     c,
 		eventStream: make(chan Event),
 		closed:      make(chan bool),
 	}
 	return &es, nil
 }
 
-func StartNewEventStream(w http.ResponseWriter) (*EventStream, error) {
-	s, err := NewEventStream(w)
+func StartNewEventStream(w http.ResponseWriter, c context.Context) (*EventStream, error) {
+	s, err := NewEventStream(w, c)
 	if err != nil {
 		return nil, err
 	}

@@ -17,11 +17,6 @@ func (w *StreamRecorder) Flush() {
 	w.Recorder.Flush()
 }
 
-// implement http.CloseNotifier
-func (w *StreamRecorder) CloseNotify() <-chan bool {
-	return w.closer
-}
-
 // implement http.ResponseWriter
 func (w *StreamRecorder) Header() http.Header {
 	return w.Recorder.Header()

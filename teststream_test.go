@@ -2,6 +2,7 @@ package sse
 
 import (
 	"testing"
+	"time"
 )
 
 func TestTestStream(t *testing.T) {
@@ -16,6 +17,7 @@ func TestTestStream(t *testing.T) {
 	ts.EventStream().SendEvent(e1)
 	ts.EventStream().SendEvent(e2)
 
+	time.Sleep(1 * time.Millisecond)
 	ts.CloseRecorder()
 
 	if !ts.Received(e1) {

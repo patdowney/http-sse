@@ -47,7 +47,7 @@ func (b *EventBroker) SendEvent(event Event) {
 func (b *EventBroker) publishEvent(event Event) {
 	b.subscriberMutex.Lock()
 
-	for stream, _ := range b.subscribers {
+	for stream := range b.subscribers {
 		stream.SendEvent(event)
 	}
 
@@ -58,6 +58,8 @@ func (b *EventBroker) addSubscriber(subscriber *EventStream) {
 	b.subscriberMutex.Lock()
 
 	b.subscribers[subscriber] = true
+	// TODO: opportunity to ship event history to subscriber here
+	// due to mutex shouldn't interfere with new events
 
 	b.subscriberMutex.Unlock()
 }
@@ -97,7 +99,7 @@ func (b *EventBroker) Start() {
 }
 
 func (b *EventBroker) closeSubscribers() {
-	for stream, _ := range b.subscribers {
+	for stream := range b.subscribers {
 		stream.Stop()
 	}
 }
